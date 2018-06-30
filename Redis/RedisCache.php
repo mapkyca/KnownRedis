@@ -12,11 +12,18 @@ namespace IdnoPlugins\Redis {
 	    
 	    \Predis\Autoloader::register();
 	    
+	    if (!extension_loaded('redis')) 
+		throw new \RuntimeException("Redis module not enabled, please install php-redis");
+	    
 	    try {
-		$this->redis = new \Predis\Client(null, [
-		    'prefix' => 'Known_'.str_replace('.','_', \Idno\Core\Idno::site()->config()->host).':' // Ensure multiple domains play nice.
+		$this->redis = new \Predis\Client([
+		    'scheme' => 'tcp',
+		    'host'  => '127.0.0.1',
+		    'port'  => 6379,
+		], [
+		    'prefix' => 'Known-'.str_replace('.','_', \Idno\Core\Idno::site()->config()->host).':' // Ensure multiple domains play nice.
 		]);
-	    } catch (\Exception $ex) {
+	    } catch (\Exception $ex) {die($ex->getMessage());
 		\Idno\Core\Idno::site()->logging()->error($ex->getMessage());
 	    }
 	    
@@ -27,8 +34,8 @@ namespace IdnoPlugins\Redis {
 	
 	public function delete($key): bool {
 	    $val = $this->load($key);
-	    $this->size -= strlen($val);
-	    $this->redis->set('size', $size);
+	    $this->redis->decrby('size', strlen($val));
+	    
 	    return $this->redis->del($key);
 	}
 
@@ -37,12 +44,11 @@ namespace IdnoPlugins\Redis {
 	}
 
 	public function size() {
-	    return $this->size;
+	    return $this->redis->get('size');
 	}
 
 	public function store($key, $value): bool {
-	    $this->size += strlen($value);
-	    $this->redis->set('size', $size);
+	    $this->redis->incrby('size', strlen($value));
 	    
 	    return $this->redis->set($key, $value);
 	}
