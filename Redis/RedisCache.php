@@ -26,6 +26,9 @@ namespace IdnoPlugins\Redis {
 	}
 	
 	public function delete($key): bool {
+	    $val = $this->load($key);
+	    $this->size -= strlen($val);
+	    $this->redis->set('size', $size);
 	    return $this->redis->del($key);
 	}
 
